@@ -38,6 +38,10 @@ class Database:
             autoflush=False,
         )
 
+    @property
+    def engine(self) -> AsyncEngine:
+        return self._engine
+
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
         async with self._sessionmaker() as session:

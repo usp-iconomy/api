@@ -6,6 +6,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from iconomy.accounts import models as accounts_models  # noqa: F401  (autogenerate)
 from iconomy.config import get_settings
 from iconomy.core.db import Base
 

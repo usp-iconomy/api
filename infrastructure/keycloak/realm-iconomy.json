@@ -1,0 +1,114 @@
+{
+  "realm": "iconomy",
+  "displayName": "USP Iconomy",
+  "enabled": true,
+
+  "loginWithEmailAllowed": true,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "duplicateEmailsAllowed": false,
+  "editUsernameAllowed": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": true,
+  "rememberMe": true,
+
+  "internationalizationEnabled": true,
+  "supportedLocales": ["pt-BR", "en"],
+  "defaultLocale": "pt-BR",
+
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 28800,
+  "ssoSessionMaxLifespan": 86400,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 10,
+  "waitIncrementSeconds": 60,
+  "passwordPolicy": "length(8) and notEmail and passwordHistory(3)",
+
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "nao-responda@uspiconomy.usp.br",
+    "fromDisplayName": "USP Iconomy",
+    "ssl": "false",
+    "starttls": "false",
+    "auth": "false"
+  },
+
+  "clients": [
+    {
+      "clientId": "iconomy-web",
+      "name": "USP Iconomy — Web",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "rootUrl": "http://localhost:3000",
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3000/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "iconomy-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "iconomy-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "iconomy-api",
+      "name": "USP Iconomy — API (resource server)",
+      "description": "Exists so tokens can carry it in `aud`. It logs nobody in and holds no credentials.",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false
+    }
+  ],
+
+  "users": [
+    {
+      "username": "professora@usp.br",
+      "email": "professora@usp.br",
+      "firstName": "Ana",
+      "lastName": "Ribeiro",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "iconomy2026", "temporary": false }]
+    },
+    {
+      "username": "aluno@example.org",
+      "email": "aluno@example.org",
+      "firstName": "Joel",
+      "lastName": "Santos",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "iconomy2026", "temporary": false }]
+    },
+    {
+      "username": "doador@example.org",
+      "email": "doador@example.org",
+      "firstName": "Marta",
+      "lastName": "Alves",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "iconomy2026", "temporary": false }]
+    }
+  ]
+}

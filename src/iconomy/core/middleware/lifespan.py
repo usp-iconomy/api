@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from typing import Any
 
+import httpx
 from redis.asyncio import Redis
 
 from iconomy.core.cache import ping_redis
@@ -11,9 +12,16 @@ logger = get_logger(__name__)
 
 
 class LifespanMiddleware:
-    def __init__(self, database: Database, redis: Redis) -> None:
+    def __init__(
+        self,
+        database: Database,
+        redis: Redis,
+        *,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> None:
         self._database = database
         self._redis = redis
+        self._http_client = http_client
 
     async def process_startup(self, scope: Mapping[str, Any], event: Mapping[str, Any]) -> None:
         checks = {
@@ -29,6 +37,8 @@ class LifespanMiddleware:
         try:
             await self._database.dispose()
             await self._redis.aclose()
+            if self._http_client is not None:
+                await self._http_client.aclose()
         except Exception:
             logger.warning("shutdown_incomplete", exc_info=True)
         logger.info("shutdown")

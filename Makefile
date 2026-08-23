@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := check
-.PHONY: setup up down logs dev worker test lint fmt typecheck check migrate revision reset
+.PHONY: setup up down logs dev worker test lint fmt typecheck check migrate revision reset kc-export
 
 setup:
 	uv sync
@@ -46,3 +46,14 @@ revision:
 reset:
 	docker compose down -v
 	docker compose up -d
+# Snapshot the running realm. The export is noisy on purpose: fold what you
+# need into realm-iconomy.json by hand and delete the snapshot. That file is
+# the source of truth, not the console.
+kc-export:
+	@token=$$(curl -s http://localhost:8080/realms/master/protocol/openid-connect/token \
+		-d client_id=admin-cli -d username=admin -d password=admin -d grant_type=password \
+		| python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])"); \
+	curl -s -X POST -H "Authorization: Bearer $$token" \
+		"http://localhost:8080/admin/realms/iconomy/partial-export?exportClients=true&exportGroupsAndRoles=true" \
+		| python3 -m json.tool > infrastructure/keycloak/realm-export.json
+	@echo "wrote infrastructure/keycloak/realm-export.json"
