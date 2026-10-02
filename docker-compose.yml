@@ -49,7 +49,9 @@ services:
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:?run make setup}
+      # Substituted into realm-iconomy.json at import.
+      KC_SEED_PASSWORD: ${KC_SEED_PASSWORD:?run make setup}
       KC_HEALTH_ENABLED: "true"
     volumes:
       - ./infrastructure/keycloak/realm-iconomy.json:/opt/keycloak/data/import/realm-iconomy.json:ro
