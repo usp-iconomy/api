@@ -72,7 +72,20 @@ down && make up` always gives back the same realm. `docker compose stop/start`
 keeps whatever you created while testing.
 
 Three members ship with it, all with password `iconomy2026`:
-`professora@usp.br`, `aluno@example.org`, `doador@example.org`.
+`professora@usp.br`, `aluno@example.org`, `doador@example.org`. Their ids are
+pinned in the JSON so the `sub` claim survives a recreated container; without
+that, the API's `users` rows would point at subjects that no longer exist and
+`/auth/me` would answer 409.
+
+### The login theme
+
+The login, registration and password pages use the `usp-iconomy` theme,
+mounted from `infrastructure/keycloak/providers/usp-iconomy-theme.jar`. The jar
+is a build artefact of the front repo (`usp-iconomy/front`, folder
+`keycloak-theme/`, `npm run build-theme`); copy the new jar here and recreate
+the container (`docker compose up -d --force-recreate keycloak`) to pick it up.
+The realm only offers `pt-BR`, so the browser's language never switches the
+page to English.
 
 If you do change something in the console, `make kc-export` snapshots the realm
 so you can fold the relevant part back into the JSON by hand. The snapshot

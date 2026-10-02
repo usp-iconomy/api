@@ -53,6 +53,8 @@ services:
       KC_HEALTH_ENABLED: "true"
     volumes:
       - ./infrastructure/keycloak/realm-iconomy.json:/opt/keycloak/data/import/realm-iconomy.json:ro
+      # Login theme built from usp-iconomy/front (keycloak-theme/); see the README.
+      - ./infrastructure/keycloak/providers/usp-iconomy-theme.jar:/opt/keycloak/providers/usp-iconomy-theme.jar:ro
     ports:
       - "8080:8080"
     depends_on:

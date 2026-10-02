@@ -13,8 +13,9 @@
   "rememberMe": true,
 
   "internationalizationEnabled": true,
-  "supportedLocales": ["pt-BR", "en"],
+  "supportedLocales": ["pt-BR"],
   "defaultLocale": "pt-BR",
+  "loginTheme": "usp-iconomy",
 
   "accessTokenLifespan": 900,
   "ssoSessionIdleTimeout": 28800,
@@ -84,6 +85,7 @@
 
   "users": [
     {
+      "id": "6f1d2c3a-0b6e-4f4e-9a51-1c0f3a7d2b01",
       "username": "professora@usp.br",
       "email": "professora@usp.br",
       "firstName": "Ana",
@@ -93,6 +95,7 @@
       "credentials": [{ "type": "password", "value": "iconomy2026", "temporary": false }]
     },
     {
+      "id": "6f1d2c3a-0b6e-4f4e-9a51-1c0f3a7d2b02",
       "username": "aluno@example.org",
       "email": "aluno@example.org",
       "firstName": "Joel",
@@ -102,6 +105,7 @@
       "credentials": [{ "type": "password", "value": "iconomy2026", "temporary": false }]
     },
     {
+      "id": "6f1d2c3a-0b6e-4f4e-9a51-1c0f3a7d2b03",
       "username": "doador@example.org",
       "email": "doador@example.org",
       "firstName": "Marta",
