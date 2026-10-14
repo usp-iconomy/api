@@ -5,7 +5,7 @@ from pydantic import HttpUrl, PostgresDsn, RedisDsn, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "ci", "staging", "production"]
-PeaceCoinAdapter = Literal["fake", "http"]
+PeaceCoinAdapter = Literal["fake", "http", "chain"]
 
 
 class Settings(BaseSettings):
@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     peacecoin_adapter: PeaceCoinAdapter = "fake"
     peacecoin_base_url: HttpUrl | None = None
     peacecoin_api_key: SecretStr | None = None
+    # Chain adapter settings (adapter="chain", pilot on Sepolia).
+    peacecoin_rpc_url: HttpUrl | None = None
+    peacecoin_chain_id: int | None = None
+    peacecoin_token_address: str | None = None
+    peacecoin_sbt_registry_address: str | None = None
+    peacecoin_relayer_private_key: SecretStr | None = None
 
     oidc_issuer: HttpUrl
     oidc_audience: str = "iconomy-api"
@@ -37,7 +43,16 @@ class Settings(BaseSettings):
 
     institutional_email_domain: str = "usp.br"
 
-    @field_validator("peacecoin_base_url", "peacecoin_api_key", "oidc_jwks_uri", mode="before")
+    @field_validator(
+        "peacecoin_base_url",
+        "peacecoin_api_key",
+        "peacecoin_rpc_url",
+        "peacecoin_token_address",
+        "peacecoin_sbt_registry_address",
+        "peacecoin_relayer_private_key",
+        "oidc_jwks_uri",
+        mode="before",
+    )
     @classmethod
     def _empty_string_is_none(cls, value: object) -> object:
         return None if value == "" else value

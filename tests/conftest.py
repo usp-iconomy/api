@@ -16,6 +16,7 @@ from iconomy.accounts import models  # noqa: F401  (registers the tables on Base
 from iconomy.app import create_app
 from iconomy.config import Settings
 from iconomy.core.db import Base, Database
+from iconomy.indexer import models as indexer_models  # noqa: F401  (same)
 
 ISSUER = "https://identity.test/realms/iconomy"
 AUDIENCE = "iconomy-api"

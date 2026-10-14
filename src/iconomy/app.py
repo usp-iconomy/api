@@ -24,6 +24,9 @@ from iconomy.core.middleware.lifespan import LifespanMiddleware
 from iconomy.core.middleware.request_context import RequestContextMiddleware
 from iconomy.core.security.jwks import KeySource, RemoteKeySource
 from iconomy.core.security.tokens import TokenVerifier
+from iconomy.peacecoin import PeaceCoinAdapter, SignerService, build_adapter, build_signer
+from iconomy.wallet.resources import CurrentWalletResource
+from iconomy.wallet.service import WalletService
 
 JWKS_TIMEOUT_SECONDS = 5.0
 
@@ -41,6 +44,8 @@ def create_app(
     database: Database | None = None,
     redis: Redis | None = None,
     key_source: KeySource | None = None,
+    peacecoin: PeaceCoinAdapter | None = None,
+    signer: SignerService | None = None,
 ) -> falcon.asgi.App:
     settings = settings or get_settings()
 
@@ -65,7 +70,14 @@ def create_app(
         algorithms=settings.oidc_algorithms,
         leeway_seconds=settings.oidc_leeway_seconds,
     )
-    accounts = AccountService(database, institutional_domain=settings.institutional_email_domain)
+    signer = signer or build_signer(settings)
+    peacecoin = peacecoin or build_adapter(settings, signer)
+    accounts = AccountService(
+        database,
+        institutional_domain=settings.institutional_email_domain,
+        peacecoin=peacecoin,
+    )
+    wallet = WalletService(accounts, peacecoin)
 
     app = falcon.asgi.App(
         middleware=[
@@ -88,5 +100,6 @@ def create_app(
 
     app.add_route("/auth/me", CurrentUserResource(accounts))
     app.add_route("/auth/me/role", CurrentUserRoleResource(accounts))
+    app.add_route("/wallet/me", CurrentWalletResource(wallet))
 
     return app

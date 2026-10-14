@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from iconomy.accounts import models as accounts_models  # noqa: F401  (autogenerate)
 from iconomy.config import get_settings
 from iconomy.core.db import Base
+from iconomy.indexer import models as indexer_models  # noqa: F401  (autogenerate)
 
 config = context.config
 if config.config_file_name is not None:
