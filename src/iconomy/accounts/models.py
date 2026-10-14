@@ -3,6 +3,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from sqlalchemy import Boolean, DateTime, Enum, String, func
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,6 +43,16 @@ class User(Base):
     )
     is_institutional: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Custodial Peace Coin wallet (RF-01). Null until first provisioning
+    # or when the adapter is unavailable at sign-in.
+    wallet_address: Mapped[str | None] = mapped_column(String(42), unique=True, default=None)
+    community: Mapped[str | None] = mapped_column(String(80), default=None)
+    skills_offered: Mapped[list[str]] = mapped_column(
+        ARRAY(String(80)), server_default="{}", default=list
+    )
+    skills_wanted: Mapped[list[str]] = mapped_column(
+        ARRAY(String(80)), server_default="{}", default=list
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

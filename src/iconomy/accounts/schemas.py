@@ -13,6 +13,10 @@ class UserResponse(Schema):
     name: str
     role: UserRole | None
     is_institutional: bool
+    wallet_address: str | None
+    community: str | None
+    skills_offered: list[str]
+    skills_wanted: list[str]
     created_at: datetime
 
     @property

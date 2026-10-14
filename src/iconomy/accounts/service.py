@@ -4,14 +4,22 @@ from iconomy.core.db import Database
 from iconomy.core.errors import ConflictError, ForbiddenError, NotFoundError
 from iconomy.core.logging import get_logger
 from iconomy.core.security.tokens import Identity
+from iconomy.peacecoin.adapter import PeaceCoinAdapter
 
 logger = get_logger(__name__)
 
 
 class AccountService:
-    def __init__(self, database: Database, *, institutional_domain: str) -> None:
+    def __init__(
+        self,
+        database: Database,
+        *,
+        institutional_domain: str,
+        peacecoin: PeaceCoinAdapter,
+    ) -> None:
         self._database = database
         self._institutional_domain = institutional_domain.strip().lower()
+        self._peacecoin = peacecoin
 
     def _is_institutional(self, email: str) -> bool:
         domain = email.rpartition("@")[2]
@@ -38,6 +46,10 @@ class AccountService:
             if not user.is_active:
                 raise ForbiddenError("This account has been disabled.")
 
+            # Back-fill the wallet when a prior sign-in happened before the
+            # chain adapter was reachable. Idempotent: no-op once set.
+            await self._ensure_wallet(user)
+
             # The session does not autoflush, so pending edits must reach the
             # database before `refresh` reads the row back.
             await session.flush()
@@ -62,12 +74,26 @@ class AccountService:
                 is_institutional=self._is_institutional(identity.email),
             )
         )
+        await self._ensure_wallet(user)
         logger.info(
             "member_provisioned",
             subject=identity.subject,
             institutional=user.is_institutional,
+            has_wallet=user.wallet_address is not None,
         )
         return user
+
+    async def _ensure_wallet(self, user: User) -> None:
+        if user.wallet_address:
+            return
+        try:
+            user.wallet_address = await self._peacecoin.create_wallet()
+        except Exception as exc:
+            logger.warning(
+                "wallet_provisioning_deferred",
+                subject=user.external_subject,
+                error=str(exc),
+            )
 
     def _refresh_from_identity(self, user: User, identity: Identity) -> None:
         if user.email != identity.email:
