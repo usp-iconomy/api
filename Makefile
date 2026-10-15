@@ -1,11 +1,13 @@
 .DEFAULT_GOAL := check
-.PHONY: setup up down logs dev worker test lint fmt typecheck check migrate revision reset kc-export
+.PHONY: setup secrets up down logs dev worker test lint fmt typecheck check migrate revision reset kc-export
 
-setup:
+setup: secrets
 	uv sync
-	@test -f .env || cp .env.example .env
 
-up:
+secrets:
+	@./scripts/local-secrets.sh
+
+up: secrets
 	docker compose up -d
 	@docker compose ps
 
@@ -43,15 +45,15 @@ migrate:
 revision:
 	uv run alembic revision --autogenerate -m "$(m)"
 
-reset:
+reset: secrets
 	docker compose down -v
 	docker compose up -d
 # Snapshot the running realm. The export is noisy on purpose: fold what you
 # need into realm-iconomy.json by hand and delete the snapshot. That file is
 # the source of truth, not the console.
 kc-export:
-	@token=$$(curl -s http://localhost:8080/realms/master/protocol/openid-connect/token \
-		-d client_id=admin-cli -d username=admin -d password=admin -d grant_type=password \
+	@. ./.env; token=$$(curl -s http://localhost:8080/realms/master/protocol/openid-connect/token \
+		-d client_id=admin-cli -d username=admin --data-urlencode password=$$KC_ADMIN_PASSWORD -d grant_type=password \
 		| python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])"); \
 	curl -s -X POST -H "Authorization: Bearer $$token" \
 		"http://localhost:8080/admin/realms/iconomy/partial-export?exportClients=true&exportGroupsAndRoles=true" \

@@ -18,7 +18,7 @@ Backend for the USP Iconomy platform.
 ## Getting started
 
 ```bash
-make setup   # install Python 3.13, create .venv, copy .env
+make setup   # install Python 3.13, create .venv, create .env with local passwords
 make up      # Postgres, Redis, Keycloak and Mailpit
 make migrate # apply migrations
 make dev     # API on http://localhost:8000
@@ -28,10 +28,26 @@ make check   # lint + mypy + tests
 | Service | Where | Notes |
 |---|---|---|
 | API | http://localhost:8000 | |
-| Keycloak | http://localhost:8080 | admin console: `admin` / `admin` |
+| Keycloak | http://localhost:8080 | admin console: user `admin`, password `KC_ADMIN_PASSWORD` in `.env` |
 | Mailpit | http://localhost:8025 | every e-mail Keycloak sends lands here |
 | Postgres | localhost:5432 | |
 | Redis | localhost:**6380** | 6379 is left free for a Redis already on the host |
+
+Every port is bound to `127.0.0.1`, so nothing here is reachable from the rest
+of the network (the USP Wi-Fi included).
+
+### Local passwords
+
+There are no shared passwords in this repo. `make setup` (and `make up`)
+generate two random values into your `.env`, never overwriting an existing one:
+
+- `KC_ADMIN_PASSWORD`: the Keycloak admin console.
+- `KC_SEED_PASSWORD`: every seed member of the realm, substituted into
+  `realm-iconomy.json` when Keycloak imports it.
+
+To change one, edit `.env` and recreate the container (`docker compose up -d
+--force-recreate keycloak`). These are for a local stack only; any shared
+environment provisions its own users and secrets.
 
 ```bash
 curl localhost:8000/health/live    # the process is up (no I/O)
@@ -71,12 +87,25 @@ Keycloak runs in `start-dev` mode with an embedded database, so `docker compose
 down && make up` always gives back the same realm. `docker compose stop/start`
 keeps whatever you created while testing.
 
-Three members ship with it, all with password `iconomy2026`:
-`professora@usp.br`, `aluno@example.org`, `doador@example.org`.
+Three members ship with it, all with the password in `KC_SEED_PASSWORD`:
+`professora@usp.br`, `aluno@example.org`, `doador@example.org`. Their ids are
+pinned in the JSON so the `sub` claim survives a recreated container; without
+that, the API's `users` rows would point at subjects that no longer exist and
+`/auth/me` would answer 409.
 
 If you do change something in the console, `make kc-export` snapshots the realm
 so you can fold the relevant part back into the JSON by hand. The snapshot
 itself is git-ignored.
+
+### The login theme
+
+The login, registration and password pages use the `usp-iconomy` theme,
+mounted from `infrastructure/keycloak/providers/usp-iconomy-theme.jar`. The jar
+is a build artefact of the front repo (`usp-iconomy/front`, folder
+`keycloak-theme/`, `npm run build-theme`); copy the new jar here and recreate
+the container (`docker compose up -d --force-recreate keycloak`) to pick it up.
+The realm only offers `pt-BR`, so the browser's language never switches the
+page to English.
 
 ## Layout
 
