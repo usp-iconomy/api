@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     peacecoin_token_address: str | None = None
     peacecoin_sbt_registry_address: str | None = None
     peacecoin_relayer_private_key: SecretStr | None = None
+    # Fernet key (urlsafe base64, 32 bytes) that encrypts member signing keys
+    # at rest. Without it the API falls back to an in-memory store, which loses
+    # every member wallet on restart — fine for tests, never for a pilot.
+    peacecoin_key_encryption_key: SecretStr | None = None
 
     oidc_issuer: HttpUrl
     oidc_audience: str = "iconomy-api"
@@ -50,6 +54,7 @@ class Settings(BaseSettings):
         "peacecoin_token_address",
         "peacecoin_sbt_registry_address",
         "peacecoin_relayer_private_key",
+        "peacecoin_key_encryption_key",
         "oidc_jwks_uri",
         mode="before",
     )

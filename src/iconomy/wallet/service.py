@@ -1,4 +1,6 @@
 from iconomy.accounts.service import AccountService
+from iconomy.circulation.repository import CirculationRepository
+from iconomy.core.db import Database
 from iconomy.core.errors import AppError
 from iconomy.core.security.tokens import Identity
 from iconomy.peacecoin.adapter import PeaceCoinAdapter
@@ -16,9 +18,15 @@ class WalletUnavailableError(AppError):
 
 
 class WalletService:
-    """Thin orchestrator — no table of its own in Fase A."""
+    """Thin orchestrator — no table of its own in Fase A/B."""
 
-    def __init__(self, accounts: AccountService, peacecoin: PeaceCoinAdapter) -> None:
+    def __init__(
+        self,
+        database: Database,
+        accounts: AccountService,
+        peacecoin: PeaceCoinAdapter,
+    ) -> None:
+        self._database = database
         self._accounts = accounts
         self._peacecoin = peacecoin
 
@@ -30,11 +38,20 @@ class WalletService:
         balance_wei = await self._peacecoin.get_balance(user.wallet_address)
         tokens_whole = balance_wei // WEI_PER_TOKEN
 
+        # 30-day sliding circulation (RN-03) from the read-model the indexer
+        # materialises. Values are wei-like; convert to whole UAIFAI for the
+        # UI, same unit as `token_balance`.
+        async with self._database.session() as session:
+            circulated_wei = await CirculationRepository(session).circulation_30d(
+                user.wallet_address
+            )
+        circulated_tokens = circulated_wei // WEI_PER_TOKEN
+
         stars, label = _reputation_stub(tokens_whole)
         return WalletSummary(
             token_balance=tokens_whole,
-            # The indexer feeds these in Fase B/D (RF-08, RF-14).
-            circulation_count=0,
+            circulation_count=circulated_tokens,
+            # Soul tokens come with Fase C (RF-05).
             soul_token_count=0,
             reputation_stars=stars,
             reputation_label=label,
@@ -42,7 +59,7 @@ class WalletService:
 
 
 def _reputation_stub(tokens: int) -> tuple[ReputationStars, str]:
-    """Provisional (Fase A). Replaced in Fase D once the indexer serves RF-15."""
+    """Provisional (Fase A/B). Replaced in Fase D once the indexer serves RF-15."""
     if tokens >= 10_000:
         return 5, "Semeadora"
     if tokens >= 1_000:

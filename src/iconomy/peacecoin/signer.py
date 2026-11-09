@@ -7,8 +7,12 @@ with a KMS/HSM-backed implementation before scale; call sites do not change.
 
 from typing import Protocol
 
+from cryptography.fernet import Fernet, InvalidToken
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
+
+from iconomy.core.db import Database
+from iconomy.peacecoin.models import WalletKey
 
 
 class KeyStore(Protocol):
@@ -20,7 +24,9 @@ class KeyStore(Protocol):
 
 
 class InMemoryKeyStore:
-    """Default for tests and local runs. Not for production — not persistent."""
+    """For tests only. Keys vanish with the process, which means any wallet
+    provisioned against it becomes unsignable after a restart — use
+    `DatabaseKeyStore` anywhere state must outlive the process."""
 
     def __init__(self) -> None:
         self._keys: dict[str, bytes] = {}
@@ -30,6 +36,39 @@ class InMemoryKeyStore:
 
     async def get(self, address: str) -> bytes | None:
         return self._keys.get(address.lower())
+
+
+class DatabaseKeyStore:
+    """Persists member keys in Postgres, encrypted with a Fernet key held in
+    configuration. Survives restarts and redeploys, which `InMemoryKeyStore`
+    does not."""
+
+    def __init__(self, database: Database, *, encryption_key: str) -> None:
+        self._database = database
+        self._fernet = Fernet(encryption_key.encode())
+
+    async def put(self, address: str, private_key: bytes) -> None:
+        token = self._fernet.encrypt(private_key)
+        async with self._database.session() as session:
+            # Re-provisioning the same address overwrites rather than failing,
+            # so a retried provisioning stays idempotent.
+            await session.merge(WalletKey(address=address.lower(), ciphertext=token))
+
+    async def get(self, address: str) -> bytes | None:
+        async with self._database.session() as session:
+            row = await session.get(WalletKey, address.lower())
+            if row is None:
+                return None
+            ciphertext = row.ciphertext
+        try:
+            return self._fernet.decrypt(ciphertext)
+        except InvalidToken:
+            # Wrong encryption key for this ciphertext — louder than returning
+            # None, which would look like "wallet not provisioned".
+            raise RuntimeError(
+                f"cannot decrypt the stored key for {address}: "
+                "peacecoin_key_encryption_key does not match the one used to store it"
+            ) from None
 
 
 class SignerService:
@@ -53,6 +92,15 @@ class SignerService:
     def relayer_address(self) -> str | None:
         return self._relayer.address if self._relayer is not None else None
 
+    @property
+    def relayer_account(self) -> LocalAccount:
+        """The admin/keeper account. Required for owner-only on-chain calls."""
+        if self._relayer is None:
+            raise RuntimeError(
+                "Relayer key is not configured (settings.peacecoin_relayer_private_key)."
+            )
+        return self._relayer
+
     async def mint_member_account(self) -> str:
         """Create a new member account and remember its key. Returns address."""
         account = Account.create()
@@ -62,3 +110,11 @@ class SignerService:
 
     async def has_member(self, address: str) -> bool:
         return await self._store.get(address) is not None
+
+    async def account_for(self, address: str) -> LocalAccount | None:
+        """Rebuild the member's local account from the stored key, or None."""
+        key = await self._store.get(address)
+        if key is None:
+            return None
+        account: LocalAccount = Account.from_key(key)
+        return account

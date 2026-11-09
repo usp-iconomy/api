@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import BigInteger, DateTime, Enum, String, func
+from sqlalchemy import BigInteger, DateTime, Enum, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -61,6 +61,10 @@ class OnchainIntent(Base):
     )
     tx_hash: Mapped[str | None] = mapped_column(String(66), default=None)
     failure_reason: Mapped[str | None] = mapped_column(String(500), default=None)
+    # Submission attempts so far. Transient RPC faults (load-balanced nodes a
+    # block behind, timeouts) must not fail a member's transfer permanently,
+    # so the processor retries until this hits its ceiling.
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

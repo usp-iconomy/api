@@ -56,6 +56,10 @@ class AccountService:
             await session.refresh(user)
             return user
 
+    async def find_by_email(self, email: str) -> User | None:
+        async with self._database.session() as session:
+            return await UserRepository(session).get_by_email(email.strip())
+
     async def _provision(self, users: UserRepository, identity: Identity) -> User:
         clash = await users.get_by_email(identity.email)
         if clash is not None:

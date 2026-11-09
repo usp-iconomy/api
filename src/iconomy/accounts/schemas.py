@@ -30,6 +30,14 @@ class CurrentUserResponse(Schema):
     email_verified: bool
 
 
+class MemberLookupResponse(Schema):
+    """Minimal shape for GET /members/by-email/{email} — just enough for the
+    circulation form to send to another member without exposing more data."""
+
+    id: uuid.UUID
+    name: str
+
+
 class ChooseRoleRequest(Schema):
     role: UserRole
 

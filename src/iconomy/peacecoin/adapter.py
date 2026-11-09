@@ -2,11 +2,12 @@ from typing import Protocol
 
 
 class PeaceCoinAdapter(Protocol):
-    """Minimum surface the API uses to reach the UAIFAI ledger.
+    """What the API uses to reach the UAIFAI ledger.
 
-    Expands in later phases (sendWithMessage, redeem, SBT, circulation).
     Addresses are 0x-prefixed EIP-55 checksummed strings. Amounts are integer
-    wei-like units (18 decimals), never floats.
+    wei-like units (18 decimals), never floats. Mutating calls return the
+    submitted transaction hash — the indexer is what tells the API the tx
+    actually landed.
     """
 
     async def create_wallet(self) -> str:
@@ -19,4 +20,22 @@ class PeaceCoinAdapter(Protocol):
 
     async def health(self) -> bool:
         """True when the adapter can reach its backing store (chain or memory)."""
+        ...
+
+    async def send_with_message(
+        self,
+        from_address: str,
+        to_address: str,
+        amount: int,
+        message: str,
+        sentiment: int,
+    ) -> str:
+        """Submit `sendWithMessage(to, amount, message, sentiment)` on behalf
+        of `from_address`. The adapter owns the sender's key in custodial mode.
+        Returns the transaction hash.
+        """
+        ...
+
+    async def apply_decay_batch(self, wallets: list[str]) -> str:
+        """Submit `applyDecayBatch(wallets)` as owner. Returns the tx hash."""
         ...

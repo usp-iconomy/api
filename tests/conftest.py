@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import json
 import uuid
 from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import asyncpg
 import falcon.util
@@ -13,10 +15,19 @@ from falcon import testing
 from sqlalchemy import text
 
 from iconomy.accounts import models  # noqa: F401  (registers the tables on Base)
+from iconomy.achievements import models as achievements_models  # noqa: F401  (same)
 from iconomy.app import create_app
+from iconomy.circulation import models as circulation_models  # noqa: F401  (same)
 from iconomy.config import Settings
 from iconomy.core.db import Base, Database
+from iconomy.courses import models as courses_models  # noqa: F401  (same)
+from iconomy.distribution_codes import models as distribution_codes_models  # noqa: F401  (same)
+from iconomy.enrollments import models as enrollments_models  # noqa: F401  (same)
 from iconomy.indexer import models as indexer_models  # noqa: F401  (same)
+from iconomy.peacecoin import models as peacecoin_models  # noqa: F401  (same)
+
+if TYPE_CHECKING:
+    from iconomy.peacecoin.fake import FakePeaceCoin
 
 ISSUER = "https://identity.test/realms/iconomy"
 AUDIENCE = "iconomy-api"
@@ -46,6 +57,8 @@ def settings() -> Settings:
         redis_url="redis://localhost:6380/1",
         oidc_issuer=ISSUER,
         oidc_audience=AUDIENCE,
+        # Pin the adapter so tests do not drift with the developer's .env.
+        peacecoin_adapter="fake",
     )
 
 
@@ -137,10 +150,22 @@ def clean_tables(database: Database) -> None:
 
 
 @pytest.fixture
+def peacecoin() -> FakePeaceCoin:
+    from iconomy.peacecoin.fake import FakePeaceCoin as _FakePeaceCoin
+
+    return _FakePeaceCoin()
+
+
+@pytest.fixture
 def client(
-    settings: Settings, database: Database, key_source: StaticKeySource
+    settings: Settings,
+    database: Database,
+    key_source: StaticKeySource,
+    peacecoin: FakePeaceCoin,
 ) -> testing.TestClient:
-    return testing.TestClient(create_app(settings, database=database, key_source=key_source))
+    return testing.TestClient(
+        create_app(settings, database=database, key_source=key_source, peacecoin=peacecoin)
+    )
 
 
 @pytest.fixture

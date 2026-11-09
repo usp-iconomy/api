@@ -1,8 +1,14 @@
 import falcon
 import falcon.asgi
 
-from iconomy.accounts.schemas import ChooseRoleRequest, CurrentUserResponse, UserResponse
+from iconomy.accounts.schemas import (
+    ChooseRoleRequest,
+    CurrentUserResponse,
+    MemberLookupResponse,
+    UserResponse,
+)
 from iconomy.accounts.service import AccountService
+from iconomy.core.errors import NotFoundError
 from iconomy.core.middleware.authentication import require_identity
 from iconomy.core.schemas import read_body
 
@@ -21,6 +27,23 @@ class CurrentUserResource:
             onboarding_required=profile.onboarding_required,
             email_verified=identity.email_verified,
         ).to_media()
+
+
+class MemberLookupResource:
+    """Resolve a member by email so the UI can target a transfer without
+    exposing a member picker (which belongs to Fase D)."""
+
+    def __init__(self, service: AccountService) -> None:
+        self._service = service
+
+    async def on_get(
+        self, req: falcon.asgi.Request, resp: falcon.asgi.Response, email: str
+    ) -> None:
+        require_identity(req)
+        user = await self._service.find_by_email(email)
+        if user is None:
+            raise NotFoundError("Member not found.")
+        resp.media = MemberLookupResponse(id=user.id, name=user.name).to_media()
 
 
 class CurrentUserRoleResource:

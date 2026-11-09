@@ -7,9 +7,17 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from iconomy.accounts import models as accounts_models  # noqa: F401  (autogenerate)
+from iconomy.achievements import models as achievements_models  # noqa: F401  (autogenerate)
+from iconomy.circulation import models as circulation_models  # noqa: F401  (autogenerate)
 from iconomy.config import get_settings
 from iconomy.core.db import Base
+from iconomy.courses import models as courses_models  # noqa: F401  (autogenerate)
+from iconomy.distribution_codes import (
+    models as distribution_codes_models,  # noqa: F401  (autogenerate)
+)
+from iconomy.enrollments import models as enrollments_models  # noqa: F401  (autogenerate)
 from iconomy.indexer import models as indexer_models  # noqa: F401  (autogenerate)
+from iconomy.peacecoin import models as peacecoin_models  # noqa: F401  (autogenerate)
 
 config = context.config
 if config.config_file_name is not None:
