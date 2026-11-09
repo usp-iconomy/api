@@ -6,9 +6,21 @@ import falcon.asgi
 import httpx
 from redis.asyncio import Redis
 
-from iconomy.accounts.resources import CurrentUserResource, CurrentUserRoleResource
+from iconomy.accounts.resources import (
+    CurrentUserResource,
+    CurrentUserRoleResource,
+    MemberLookupResource,
+)
 from iconomy.accounts.service import AccountService
 from iconomy.api.health import LivenessResource, ReadinessResource
+from iconomy.circulation.resources import (
+    CirculationFeedResource,
+    IntentStatusResource,
+    SendResource,
+    TransactionsResource,
+)
+from iconomy.circulation.sentiment import KeywordSentimentClassifier
+from iconomy.circulation.service import CirculationService
 from iconomy.config import Settings, get_settings
 from iconomy.core.cache import create_redis
 from iconomy.core.db import Database
@@ -70,14 +82,15 @@ def create_app(
         algorithms=settings.oidc_algorithms,
         leeway_seconds=settings.oidc_leeway_seconds,
     )
-    signer = signer or build_signer(settings)
+    signer = signer or build_signer(settings, database)
     peacecoin = peacecoin or build_adapter(settings, signer)
     accounts = AccountService(
         database,
         institutional_domain=settings.institutional_email_domain,
         peacecoin=peacecoin,
     )
-    wallet = WalletService(accounts, peacecoin)
+    wallet = WalletService(database, accounts, peacecoin)
+    circulation = CirculationService(database, peacecoin, KeywordSentimentClassifier())
 
     app = falcon.asgi.App(
         middleware=[
@@ -100,6 +113,11 @@ def create_app(
 
     app.add_route("/auth/me", CurrentUserResource(accounts))
     app.add_route("/auth/me/role", CurrentUserRoleResource(accounts))
+    app.add_route("/members/by-email/{email}", MemberLookupResource(accounts))
     app.add_route("/wallet/me", CurrentWalletResource(wallet))
+    app.add_route("/circulation", CirculationFeedResource(circulation))
+    app.add_route("/circulation/transactions", TransactionsResource(circulation, accounts))
+    app.add_route("/circulation/send", SendResource(circulation, accounts))
+    app.add_route("/circulation/intents/{intent_id}", IntentStatusResource(circulation, accounts))
 
     return app
